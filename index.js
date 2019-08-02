@@ -17,17 +17,18 @@ const getVoices = () => {
    voices = synth.getVoices();
    // Loop through voices and create an option for each one
    voices.forEach(voice => {
-      // Create option element
-      const option = document.createElement('option');
-      // Fill option with voice and language
-      option.textContent = voice.name + '('+ voice.lang +')';
-      // Set needed option attributes
-      option.setAttribute('data-lang', voice.lang);
-      option.setAttribute('data-name', voice.name);
-
-      voiceSelect.appendChild(option);
+      voiceSelect.appendChild(createVoiceOption(voice));
    });
+};
 
+const createVoiceOption = (voice) => {
+   const option = document.createElement('option');
+   // Fill option with voice and language
+   option.textContent = voice.name + '('+ voice.lang +')';
+   // Set needed option attributes
+   option.setAttribute('data-lang', voice.lang);
+   option.setAttribute('data-name', voice.name);
+   return option;
 };
 
 getVoices();
@@ -38,53 +39,63 @@ if (synth.onvoiceschanged !== undefined) {
 
 // Speak
 const speak = () => {
-
-
-
    // Check if speaking
-   if (synth.speaking) {
-      console.error('Already speaking...');
+   if (alreadySpeaking(synth)) {
       return 0;
    }
 
    if (textInput.value !== '') {
       // Add background animation
-      body.style.background = '#141414 url(wave.gif)';
-      body.style.backgroundRepeat = 'repeat-x';
-      body.style.backgroundSize = '100% 100%';
-
+      addBackgroundAnimation();
       // Get speak text
       const speakText = new SpeechSynthesisUtterance(textInput.value);
-      // Speak end
-      speakText.onend = e => {
-         console.log('Done speaking...');
-         body.style.background = '#141414';
-      };
-
-      // Speak error
-      speakText.onerror = e => {
-         console.error('Something went wrong');
-      };
-
+      endSpeak(speakText);
+      speakOnErr(speakText);
       // Selected void
       const selectedVoice = voiceSelect.selectedOptions[0].getAttribute('data-name');
-
       // Loop through voices
       voices.forEach(voice => {
          if(voice.name === selectedVoice) {
             speakText.voice = voice;
          }
       });
-
-      // Set pitch and rate
-      speakText.rate = rate.value;
-      speakText.pitch = pitch.value;
       // Speak
-      synth.speak(speakText);
+      synth.speak(setPitchAndRate(speakText, rate.value, pitch.value));
    }
 };
 
-// Event Listeners
+setPitchAndRate = (speakText, rate, pitch ) => {
+   speakText.rate = rate;
+   speakText.pitch = pitch;
+   return speakText;
+};
+
+endSpeak = (speakText) => {
+   speakText.onend = () => {
+      console.log('Done speaking...');
+      body.style.background = '#141414';
+   };
+};
+
+speakOnErr = (speakText) => {
+   speakText.onerror = () => {
+      console.error('Something went wrong');
+   };
+};
+
+alreadySpeaking = (synth) => {
+   if (synth.speaking) {
+      console.error('Already speaking...');
+      return true;
+   }
+   return false;
+};
+
+const addBackgroundAnimation = () => {
+   body.style.background = '#141414 url(wave.gif)';
+   body.style.backgroundRepeat = 'repeat-x';
+   body.style.backgroundSize = '100% 100%';
+};
 
 // Text form submit
 textForm.addEventListener('submit', e => {
@@ -94,8 +105,7 @@ textForm.addEventListener('submit', e => {
 });
 
 // Rate value change
-rate.addEventListener('change', e => rateValue.textContent = rate.value);
-pitch.addEventListener('change', e => pitchValue.textContent = pitch.value);
-
+rate.addEventListener('change', () => rateValue.textContent = rate.value);
+pitch.addEventListener('change', () => pitchValue.textContent = pitch.value);
 // Voice select change
-voiceSelect.addEventListener('change', e => speak());
+voiceSelect.addEventListener('change', () => speak());
